@@ -284,6 +284,19 @@ footer{max-width:1600px;margin:40px auto 20px;padding:20px 28px;text-align:cente
       <div class="chart-container"><canvas id="h-leitos1k"></canvas></div>
     </div>
     <div class="card">
+      <h3>🎓 Residentes por hospital</h3>
+      <div class="chart-subtitle">Capacidade formadora médica</div>
+      <div class="chart-container"><canvas id="h-res"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>🧭 Razão preceptores / residentes</h3>
+      <div class="chart-subtitle">Qualidade formativa</div>
+      <div class="chart-container"><canvas id="h-razpr"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-grid cols-3">
+    <div class="card">
       <h3>☢️ Radioterapeutas / 1.000 pacientes</h3>
       <div class="chart-subtitle">Indicador Antigravity (viável direto)</div>
       <div class="chart-container"><canvas id="h-radio1k"></canvas></div>
@@ -293,14 +306,14 @@ footer{max-width:1600px;margin:40px auto 20px;padding:20px 28px;text-align:cente
       <div class="chart-subtitle">Capacidade crítica relativa</div>
       <div class="chart-container"><canvas id="h-uti1k"></canvas></div>
     </div>
-  </div>
-
-  <div class="chart-grid cols-3">
     <div class="card">
       <h3>🔪 Cirurgiões oncológicos / 1.000 pacientes</h3>
       <div class="chart-subtitle">Indicador Antigravity (viável direto)</div>
       <div class="chart-container"><canvas id="h-cir1k"></canvas></div>
     </div>
+  </div>
+
+  <div class="chart-grid cols-3">
     <div class="card">
       <h3>👩‍⚕️ Oncologistas clínicos (contagem)</h3>
       <div class="chart-subtitle">Força de trabalho absoluta</div>
@@ -311,14 +324,14 @@ footer{max-width:1600px;margin:40px auto 20px;padding:20px 28px;text-align:cente
       <div class="chart-subtitle">Força de trabalho absoluta</div>
       <div class="chart-container"><canvas id="h-prof-radio"></canvas></div>
     </div>
-  </div>
-
-  <div class="chart-grid cols-3">
     <div class="card">
       <h3>🔪 Cirurgiões oncológicos (contagem)</h3>
       <div class="chart-subtitle">Força de trabalho absoluta</div>
       <div class="chart-container"><canvas id="h-prof-cirurg"></canvas></div>
     </div>
+  </div>
+
+  <div class="chart-grid cols-3">
     <div class="card">
       <h3>⚙️ Produtividade: cirurgias por cirurgião</h3>
       <div class="chart-subtitle">Cirurgias oncológicas / cirurgião oncológico</div>
@@ -329,9 +342,6 @@ footer{max-width:1600px;margin:40px auto 20px;padding:20px 28px;text-align:cente
       <div class="chart-subtitle">Pacientes quimio / oncologista clínico</div>
       <div class="chart-container"><canvas id="h-q-onco"></canvas></div>
     </div>
-  </div>
-
-  <div class="chart-grid cols-3">
     <div class="card">
       <h3>⚙️ Produtividade: radio por radioterapeuta</h3>
       <div class="chart-subtitle">Pacientes radio / radioterapeuta</div>
@@ -559,6 +569,7 @@ footer{max-width:1600px;margin:40px auto 20px;padding:20px 28px;text-align:cente
       <option value="aih_total">Internações AIH</option>
       <option value="leitos">Leitos Totais</option>
       <option value="uti">Leitos de UTI</option>
+      <option value="residentes">Residentes Médicos</option>
     </select>
   </div>
 
@@ -1196,6 +1207,8 @@ function renderKPIs(reg){
   const sum = (k)=>reg.reduce((a,x)=>a+(Number(x[k])||0),0);
   const nCacon = reg.filter(r=>r.tipo==='CACON').length;
   const nUnacon = reg.filter(r=>r.tipo==='UNACON').length;
+  const resSum = sum('residentes');
+  const precSum = sum('preceptores');
   const items = [
     {l:'Hospitais Habilitados', v:reg.length, sub:`${nCacon} CACON · ${nUnacon} UNACON`, grad:'linear-gradient(90deg,#6366f1,#8b5cf6)'},
     {l:'Leitos SUS', v:fmt(sum('leitos_sus')), sub:fmt(sum('leitos_total'))+' existentes', grad:'linear-gradient(90deg,#10b981,#22d3ee)'},
@@ -1205,6 +1218,7 @@ function renderKPIs(reg){
     {l:'Internações AIH', v:fmt(sum('aih_total')), sub:fmtBRL(sum('aih_valor')), grad:'linear-gradient(90deg,#8b5cf6,#ec4899)'},
     {l:'Cirurgias Oncológicas', v:fmt(sum('cirurgias_onco')), sub:'grupo 0416 SIGTAB', grad:'linear-gradient(90deg,#84cc16,#10b981)'},
     {l:'Profissionais (total)', v:fmt(sum('prof_total')), sub:`${fmt(sum('prof_onco_clin'))} onco clín · ${fmt(sum('prof_cirurg'))} cirurg · ${fmt(sum('prof_radio_onco'))} radio`, grad:'linear-gradient(90deg,#22d3ee,#8b5cf6)'},
+    {l:'Residentes · Preceptores', v:`${fmt(resSum)} · ${fmt(precSum)}`, sub: (resSum===0 && precSum===0) ? 'Sem registros no CNES (base atual)' : 'Capacidade formadora', grad:'linear-gradient(90deg,#f59e0b,#6366f1)'},
   ];
   document.getElementById('kpi-container').innerHTML = items.map(i=>`
     <div class="kpi" style="--grad:${i.grad}">
@@ -1658,6 +1672,8 @@ function getMetricDefs(){
     prof_radio_onco: { label:'Radioterapeutas', get:(h)=>h.prof_radio_onco, format:(x)=>fmt(x), tick:(v)=>fmtK(v) },
     h_cirurg: { label:'Horas (cirurg. onco)', get:(h)=>h.h_cirurg, format:(x)=>fmt(x), tick:(v)=>fmtK(v) },
     h_clin: { label:'Horas (onco clín.)', get:(h)=>h.h_clin, format:(x)=>fmt(x), tick:(v)=>fmtK(v) },
+    residentes: { label:'Residentes (CNES)', get:(h)=>h.residentes, format:(x)=>fmt(x), tick:(v)=>fmtK(v) },
+    preceptores: { label:'Preceptores (CNES)', get:(h)=>h.preceptores, format:(x)=>fmt(x), tick:(v)=>fmtK(v) },
     total_equip: { label:'Equipamentos (total)', get:(h)=>h.total_equip, format:(x)=>fmt(x), tick:(v)=>fmtK(v) },
     aceleradores_lineares: { label:'Aceleradores lineares', get:(h)=>h.aceleradores_lineares, format:(x)=>fmt(x), tick:(v)=>fmtK(v) },
     bombas_cobalto: { label:'Bombas de cobalto', get:(h)=>h.bombas_cobalto, format:(x)=>fmt(x), tick:(v)=>fmtK(v) },
@@ -1704,6 +1720,8 @@ function renderDistribuicao(reg){
   histChart('h-ocup',   reg.map(r=>r.taxa_ocupacao), COLORS.accent2, {dec:1, focus: focus?.taxa_ocupacao, startAtZero:true});
   histChart('h-onco1k', reg.map(r=>r.ind_onco_clin_1k), COLORS.emerald, {dec:1, focus: focus?.ind_onco_clin_1k, startAtZero:true});
   histChart('h-leitos1k', reg.map(r=>r.ind_leitos_1k), COLORS.accent, {dec:1, focus: focus?.ind_leitos_1k, startAtZero:true});
+  histChart('h-res',    reg.map(r=>r.residentes), COLORS.amber, {dec:0, focus: focus?.residentes, startAtZero:true});
+  histChart('h-razpr',  reg.map(r=>r.razao_preceptor_residente), COLORS.cyan, {dec:2, focus: focus?.razao_preceptor_residente, startAtZero:true});
   histChart('h-radio1k', reg.map(r=>r.ind_radio_1k), COLORS.cyan, {dec:2, focus: focus?.ind_radio_1k, startAtZero:true});
   histChart('h-uti1k', reg.map(r=>r.ind_uti_1k), COLORS.rose, {dec:2, focus: focus?.ind_uti_1k, startAtZero:true});
   const cir1k = r => (r.prof_cirurg!=null && (r.pacientes_unicos_total||0)>0) ? (r.prof_cirurg / r.pacientes_unicos_total * 1000) : null;
@@ -2030,7 +2048,8 @@ function renderRankings(){
     cirurgias_onco:'cirurgias_onco',
     aih_total:'aih_total',
     leitos:'leitos_total',
-    uti:'uti_total'
+    uti:'uti_total',
+    residentes:'residentes'
   };
   const field = mapField[metric];
   const top = [...reg].filter(r=>(r[field]||0)>0).sort((a,b)=>(b[field]||0)-(a[field]||0)).slice(0,20);
@@ -2079,12 +2098,7 @@ function renderHospitais(reg){
 function renderMatriz(){
   const cont = document.getElementById('matriz-container');
   const grupos = {};
-  const isExcluded = (ind)=>{
-    const s = String(ind || '').toLowerCase();
-    return s.includes('residente') || s.includes('preceptor');
-  };
   (DATA.matriz_viabilidade||[]).forEach(([dim,ind,clas,obs])=>{
-    if(isExcluded(ind)) return;
     grupos[dim] = grupos[dim]||[];
     grupos[dim].push({ind,clas,obs});
   });
@@ -2117,6 +2131,10 @@ function renderMatriz(){
     "Oncologistas clínicos por 1.000 pacientes": {get:(h)=>h.ind_onco_clin_1k, fmt:fmt1},
     "Radioterapeutas por 1.000 pacientes": {get:(h)=>h.ind_radio_1k, fmt:fmt1},
     "Cirurgiões oncológicos por 1.000 pacientes": {get:(h)=>h.ind_cirurg_1k ?? ((h.prof_cirurg!=null && h.pacientes_unicos_total>0)?(h.prof_cirurg/h.pacientes_unicos_total*1000):null), fmt:fmt1},
+    "Residentes médicos / 1.000 pacientes": {get:(h)=>h.ind_residentes_1k ?? ((h.residentes!=null && h.pacientes_unicos_total>0)?(h.residentes/h.pacientes_unicos_total*1000):null), fmt:fmt2},
+    "Preceptores médicos / 1.000 pacientes": {get:(h)=>h.ind_preceptores_1k ?? ((h.preceptores!=null && h.pacientes_unicos_total>0)?(h.preceptores/h.pacientes_unicos_total*1000):null), fmt:fmt2},
+    "Razão preceptores / residentes": {get:(h)=>h.razao_preceptor_residente, fmt:fmt2},
+    "% médicos vinculados marcados como residentes ou preceptores": {get:(h)=>(h.prof_total>0)?((Number(h.residentes)||0)+(Number(h.preceptores)||0))/h.prof_total*100:null, fmt:fmtPct},
     "Leitos de internação / pacientes": {get:(h)=>h.ind_leitos_1k, fmt:fmt2},
     "Leitos de UTI / pacientes": {get:(h)=>h.ind_uti_1k, fmt:fmt2},
     "Volume de quimioterapia": {get:(h)=>h.quimio_apacs, fmt:fmtInt},
@@ -2135,7 +2153,7 @@ function renderMatriz(){
     "Postos de trabalho vagos": {get:()=>null, fmt:fmt2},
   };
 
-  const rows = (DATA.matriz_viabilidade||[]).filter(([,ind])=>!isExcluded(ind)).map(([dim,ind,clas])=>{
+  const rows = (DATA.matriz_viabilidade||[]).map(([dim,ind,clas])=>{
     const def = defs[ind];
     if(!def) return {dim,ind,clas, ok:false};
     const arr = reg.map(h=>def.get(h)).filter(v=>v!=null && isFinite(v));
@@ -2184,6 +2202,7 @@ function exportCurrent(){
     Tipo:h.tipo, Gestao:h.gestao, NaturezaJuridica:h.nat_jur,
     LeitosTotal:h.leitos_total, LeitosSUS:h.leitos_sus, UTI_Total:h.uti_total, UTI_SUS:h.uti_sus,
     Profissionais:h.prof_total, OncoClin:h.prof_onco_clin, RadioOnco:h.prof_radio_onco, CirurgOnco:h.prof_cirurg,
+    Residentes:h.residentes, Preceptores:h.preceptores, RazaoPR:h.razao_preceptor_residente,
     QuimioAPACs:h.quimio_apacs, QuimioPacientes:h.quimio_pacientes, QuimioValor:h.quimio_valor,
     RadioAPACs:h.radio_apacs, RadioPacientes:h.radio_pacientes, RadioValor:h.radio_valor,
     AIH_Internacoes:h.aih_total, AIH_Valor:h.aih_valor, AIH_Dias:h.aih_dias,
