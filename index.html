@@ -116,6 +116,7 @@ footer{max-width:1600px;margin:40px auto 20px;padding:20px 28px;text-align:cente
     <div class="tabs" id="tabs">
       <button class="tab active" data-tab="panorama">📊 Panorama</button>
       <button class="tab" data-tab="distribuicao">📈 Distribuições</button>
+      <button class="tab" data-tab="consistencia">🧾 Consistência</button>
       <button class="tab" data-tab="producao">🏥 Produção</button>
       <button class="tab" data-tab="correlacoes">📉 Correlações</button>
       <button class="tab" data-tab="geografia">🗺️ Geografia</button>
@@ -201,6 +202,58 @@ footer{max-width:1600px;margin:40px auto 20px;padding:20px 28px;text-align:cente
   </div>
 </section>
 
+<!-- CONSISTÊNCIA -->
+<section class="section" id="s-consistencia">
+  <h2 class="section-title">Análise de Consistência dos Dados
+    <small>Checagens automáticas no filtro atual para identificar registros incompatíveis e sinais de baixa qualidade</small>
+  </h2>
+
+  <div class="alert" id="cons-note">
+    <strong>Como interpretar:</strong> (1) APACs &gt; 0 com pacientes únicos = 0 sugere ausência de CNS para deduplicação; (2) sessões/paciente muito acima do padrão (corte por IQR) sugere inconsistências ou casos extremos.
+    <div class="legend-inline" style="margin-top:10px">
+      <button class="btn-export" onclick="openCnsQualityLoader()">Carregar qualidade CNS (CSV)</button>
+      <span style="color:var(--muted)">Opcional: adiciona “APACs sem CNS” aos resumos e tabelas.</span>
+    </div>
+    <div id="cons-status" style="margin-top:10px;color:var(--text2)"></div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px">
+    <h3>📌 Resumo</h3>
+    <div class="chart-subtitle">Indicadores do filtro atual (Quimio e Radio)</div>
+    <table class="data" id="tab-consistencia">
+      <thead>
+        <tr>
+          <th>Modalidade</th>
+          <th style="text-align:right">Hospitais (APAC&gt;0, Pac=0)</th>
+          <th style="text-align:right">APACs</th>
+          <th style="text-align:right">APACs sem CNS</th>
+          <th style="text-align:right">Outliers (sessões/pac)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>⚠️ Principais registros incompatíveis</h3>
+    <div class="chart-subtitle">Hospitais com APACs registradas, mas pacientes únicos = 0 (clique para definir Hospital foco)</div>
+    <div class="hospital-list" style="max-height:520px">
+      <table class="data" id="tab-consistencia-detalhe">
+        <thead>
+          <tr>
+            <th>Modalidade</th>
+            <th>Hospital</th>
+            <th>UF</th>
+            <th style="text-align:right">APACs</th>
+            <th style="text-align:right">Pacientes</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
 <!-- DISTRIBUIÇÕES -->
 <section class="section" id="s-distribuicao">
   <h2 class="section-title">Histogramas de Distribuição
@@ -225,6 +278,14 @@ footer{max-width:1600px;margin:40px auto 20px;padding:20px 28px;text-align:cente
         <input type="checkbox" id="opt-autobins" checked style="accent-color:#6366f1" />
         Bins automáticos (Freedman–Diaconis)
       </label>
+    </div>
+  </div>
+
+  <div class="alert" id="inc-note">
+    <strong>Qualidade do registro:</strong> um sinal frequente de inconsistência é ter muitas APACs e poucos pacientes únicos (deduplicação por CNS). Os painéis abaixo listam hospitais com sessões/paciente fora do padrão.
+    <div class="legend-inline" style="margin-top:10px">
+      <button class="btn-export" onclick="openCnsQualityLoader()">Carregar qualidade CNS (CSV)</button>
+      <span style="color:var(--muted)">Opcional: adiciona “APACs sem CNS” nos painéis de Quimio/Radio.</span>
     </div>
   </div>
 
@@ -259,6 +320,60 @@ footer{max-width:1600px;margin:40px auto 20px;padding:20px 28px;text-align:cente
     </div>
   </div>
 
+  <div class="chart-grid cols-2">
+    <div class="card">
+      <h3>🧪 Sessões de quimioterapia por paciente</h3>
+      <div class="chart-subtitle" id="sub-q-sess-pac">APACs de quimio / pacientes únicos</div>
+      <div class="chart-container"><canvas id="h-q-sess-pac"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>⚠️ Dados incongruentes — Quimioterapia</h3>
+      <div class="chart-subtitle" id="sub-incongruentes-quimio">Hospitais com APACs/paciente acima do ponto de corte. Clique para definir Hospital foco.</div>
+      <div class="hospital-list" style="max-height:320px">
+        <table class="data" id="tab-incongruentes-quimio">
+          <thead>
+            <tr>
+              <th>Hospital</th>
+              <th>UF</th>
+              <th style="text-align:right">Sessões/pac</th>
+              <th style="text-align:right">APACs</th>
+              <th style="text-align:right">APACs sem CNS</th>
+              <th style="text-align:right">Pacientes</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-grid cols-2">
+    <div class="card">
+      <h3>🧪 Sessões de radioterapia por paciente</h3>
+      <div class="chart-subtitle" id="sub-r-sess-pac">APACs de radio / pacientes únicos</div>
+      <div class="chart-container"><canvas id="h-r-sess-pac"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>⚠️ Dados incongruentes — Radioterapia</h3>
+      <div class="chart-subtitle" id="sub-incongruentes-radio">Hospitais com APACs/paciente acima do ponto de corte. Clique para definir Hospital foco.</div>
+      <div class="hospital-list" style="max-height:320px">
+        <table class="data" id="tab-incongruentes-radio">
+          <thead>
+            <tr>
+              <th>Hospital</th>
+              <th>UF</th>
+              <th style="text-align:right">Sessões/pac</th>
+              <th style="text-align:right">APACs</th>
+              <th style="text-align:right">APACs sem CNS</th>
+              <th style="text-align:right">Pacientes</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <div class="chart-grid cols-3">
     <div class="card">
       <h3>⏱️ TMP médio (dias)</h3>
@@ -284,19 +399,6 @@ footer{max-width:1600px;margin:40px auto 20px;padding:20px 28px;text-align:cente
       <div class="chart-container"><canvas id="h-leitos1k"></canvas></div>
     </div>
     <div class="card">
-      <h3>🎓 Residentes por hospital</h3>
-      <div class="chart-subtitle">Capacidade formadora médica</div>
-      <div class="chart-container"><canvas id="h-res"></canvas></div>
-    </div>
-    <div class="card">
-      <h3>🧭 Razão preceptores / residentes</h3>
-      <div class="chart-subtitle">Qualidade formativa</div>
-      <div class="chart-container"><canvas id="h-razpr"></canvas></div>
-    </div>
-  </div>
-
-  <div class="chart-grid cols-3">
-    <div class="card">
       <h3>☢️ Radioterapeutas / 1.000 pacientes</h3>
       <div class="chart-subtitle">Indicador Antigravity (viável direto)</div>
       <div class="chart-container"><canvas id="h-radio1k"></canvas></div>
@@ -306,14 +408,14 @@ footer{max-width:1600px;margin:40px auto 20px;padding:20px 28px;text-align:cente
       <div class="chart-subtitle">Capacidade crítica relativa</div>
       <div class="chart-container"><canvas id="h-uti1k"></canvas></div>
     </div>
+  </div>
+
+  <div class="chart-grid cols-3">
     <div class="card">
       <h3>🔪 Cirurgiões oncológicos / 1.000 pacientes</h3>
       <div class="chart-subtitle">Indicador Antigravity (viável direto)</div>
       <div class="chart-container"><canvas id="h-cir1k"></canvas></div>
     </div>
-  </div>
-
-  <div class="chart-grid cols-3">
     <div class="card">
       <h3>👩‍⚕️ Oncologistas clínicos (contagem)</h3>
       <div class="chart-subtitle">Força de trabalho absoluta</div>
@@ -324,14 +426,14 @@ footer{max-width:1600px;margin:40px auto 20px;padding:20px 28px;text-align:cente
       <div class="chart-subtitle">Força de trabalho absoluta</div>
       <div class="chart-container"><canvas id="h-prof-radio"></canvas></div>
     </div>
+  </div>
+
+  <div class="chart-grid cols-3">
     <div class="card">
       <h3>🔪 Cirurgiões oncológicos (contagem)</h3>
       <div class="chart-subtitle">Força de trabalho absoluta</div>
       <div class="chart-container"><canvas id="h-prof-cirurg"></canvas></div>
     </div>
-  </div>
-
-  <div class="chart-grid cols-3">
     <div class="card">
       <h3>⚙️ Produtividade: cirurgias por cirurgião</h3>
       <div class="chart-subtitle">Cirurgias oncológicas / cirurgião oncológico</div>
@@ -342,6 +444,9 @@ footer{max-width:1600px;margin:40px auto 20px;padding:20px 28px;text-align:cente
       <div class="chart-subtitle">Pacientes quimio / oncologista clínico</div>
       <div class="chart-container"><canvas id="h-q-onco"></canvas></div>
     </div>
+  </div>
+
+  <div class="chart-grid cols-3">
     <div class="card">
       <h3>⚙️ Produtividade: radio por radioterapeuta</h3>
       <div class="chart-subtitle">Pacientes radio / radioterapeuta</div>
@@ -512,6 +617,24 @@ footer{max-width:1600px;margin:40px auto 20px;padding:20px 28px;text-align:cente
         <option value="none">Única cor</option>
       </select>
     </div>
+    <div class="filter-field">
+      <label>Outliers (X)</label>
+      <select id="c-outliers-x">
+        <option value="NONE">Não filtrar</option>
+        <option value="P1P99" selected>Truncar p1–p99</option>
+        <option value="P5P95">Truncar p5–p95</option>
+        <option value="IQR">IQR (Q1-1,5×IQR / Q3+1,5×IQR)</option>
+      </select>
+    </div>
+    <div class="filter-field">
+      <label>Outliers (Y)</label>
+      <select id="c-outliers-y">
+        <option value="NONE">Não filtrar</option>
+        <option value="P1P99" selected>Truncar p1–p99</option>
+        <option value="P5P95">Truncar p5–p95</option>
+        <option value="IQR">IQR (Q1-1,5×IQR / Q3+1,5×IQR)</option>
+      </select>
+    </div>
   </div>
 
   <div class="alert" id="corr-stats">
@@ -569,7 +692,6 @@ footer{max-width:1600px;margin:40px auto 20px;padding:20px 28px;text-align:cente
       <option value="aih_total">Internações AIH</option>
       <option value="leitos">Leitos Totais</option>
       <option value="uti">Leitos de UTI</option>
-      <option value="residentes">Residentes Médicos</option>
     </select>
   </div>
 
@@ -598,7 +720,9 @@ footer{max-width:1600px;margin:40px auto 20px;padding:20px 28px;text-align:cente
         <th>CNES</th><th>Hospital</th><th>Município</th><th>UF</th><th>Tipo</th>
         <th style="text-align:right">Leitos</th>
         <th style="text-align:right">Quimio (pac)</th>
+        <th style="text-align:right">Sessões/pac</th>
         <th style="text-align:right">Radio (pac)</th>
+        <th style="text-align:right">Sessões/pac (radio)</th>
         <th style="text-align:right">Cirurgias</th>
         <th style="text-align:right">TMP</th>
         <th style="text-align:right">Ocup.%</th>
@@ -959,7 +1083,9 @@ function initCorrelacoes(){
   const yEl = document.getElementById('c-y');
   const sEl = document.getElementById('c-scope');
   const cEl = document.getElementById('c-color');
-  if(!xEl || !yEl || !sEl || !cEl) return;
+  const oxEl = document.getElementById('c-outliers-x');
+  const oyEl = document.getElementById('c-outliers-y');
+  if(!xEl || !yEl || !sEl || !cEl || !oxEl || !oyEl) return;
   if(xEl.dataset.inited) return;
   xEl.dataset.inited = '1';
 
@@ -988,6 +1114,8 @@ function initCorrelacoes(){
   yEl.addEventListener('change', onChange);
   sEl.addEventListener('change', onChange);
   cEl.addEventListener('change', onChange);
+  oxEl.addEventListener('change', onChange);
+  oyEl.addEventListener('change', onChange);
 }
 
 function getCorrelacaoHospitais(){
@@ -1007,6 +1135,8 @@ function renderCorrelacoes(){
   const xKey = document.getElementById('c-x')?.value;
   const yKey = document.getElementById('c-y')?.value;
   const colorMode = document.getElementById('c-color')?.value || 'tipo';
+  const outModeX = document.getElementById('c-outliers-x')?.value || 'P1P99';
+  const outModeY = document.getElementById('c-outliers-y')?.value || 'P1P99';
   if(!xKey || !yKey || !DATA) return;
 
   const defs = getMetricDefs();
@@ -1015,7 +1145,7 @@ function renderCorrelacoes(){
   if(!xDef || !yDef) return;
 
   const hs = getCorrelacaoHospitais();
-  const points = hs.map(h=>({
+  let points = hs.map(h=>({
     x: Number(xDef.get(h)),
     y: Number(yDef.get(h)),
     cnes: h.cnes,
@@ -1023,6 +1153,34 @@ function renderCorrelacoes(){
     uf: h.uf,
     tipo: h.tipo
   })).filter(p=>isFinite(p.x) && isFinite(p.y));
+
+  const beforeN = points.length;
+  const q = (arr, p)=> quantileSorted(arr, p);
+  const axisBounds = (arr, mode)=>{
+    if(!arr.length || mode === 'NONE') return null;
+    if(mode === 'P5P95') return { a: q(arr,0.05), b: q(arr,0.95) };
+    if(mode === 'IQR'){
+      const q1 = q(arr,0.25);
+      const q3 = q(arr,0.75);
+      const iqr = q3 - q1;
+      return { a: q1 - 1.5*iqr, b: q3 + 1.5*iqr };
+    }
+    return { a: q(arr,0.01), b: q(arr,0.99) };
+  };
+
+  const xs = points.map(p=>p.x).sort((a,b)=>a-b);
+  const ys = points.map(p=>p.y).sort((a,b)=>a-b);
+  const bx = axisBounds(xs, outModeX);
+  const by = axisBounds(ys, outModeY);
+
+  if(bx){
+    points = points.filter(p=>p.x>=bx.a && p.x<=bx.b);
+  }
+  const afterX = points.length;
+  if(by){
+    points = points.filter(p=>p.y>=by.a && p.y<=by.b);
+  }
+  const afterXY = points.length;
 
   const reg = scatterRegressionChart('c-regress', points, {
     colorMode,
@@ -1036,9 +1194,11 @@ function renderCorrelacoes(){
 
   if(statsEl){
     if(!reg){
-      statsEl.innerHTML = `<strong>Regressão linear:</strong> N: ${points.length} (insuficiente para regressão)`;
+      const cut = ` · Outliers X: ${outModeX}${bx?` (${afterX}/${beforeN})`:''} · Outliers Y: ${outModeY}${by?` (${afterXY}/${afterX})`:''}`;
+      statsEl.innerHTML = `<strong>Regressão linear:</strong> N: ${points.length} (insuficiente para regressão)${cut}`;
     } else {
-      statsEl.innerHTML = `<strong>Regressão linear:</strong> N: ${reg.n} · R²: ${reg.r2.toFixed(3)} · y = ${reg.intercept.toFixed(3)} + ${reg.slope.toFixed(3)}x`;
+      const cut = ` · Outliers X: ${outModeX}${bx?` (${afterX}/${beforeN})`:''} · Outliers Y: ${outModeY}${by?` (${afterXY}/${afterX})`:''}`;
+      statsEl.innerHTML = `<strong>Regressão linear:</strong> N: ${reg.n} · R²: ${reg.r2.toFixed(3)} · y = ${reg.intercept.toFixed(3)} + ${reg.slope.toFixed(3)}x${cut}`;
     }
   }
 }
@@ -1085,6 +1245,92 @@ function showDataLoader(){
       inp.value = '';
     }
   };
+}
+
+function splitCsvLine(line, delim){
+  const out = [];
+  let cur = '';
+  let q = false;
+  for(let i=0;i<line.length;i++){
+    const ch = line[i];
+    if(ch === '"'){
+      if(q && line[i+1] === '"'){
+        cur += '"';
+        i++;
+      } else {
+        q = !q;
+      }
+      continue;
+    }
+    if(!q && ch === delim){
+      out.push(cur);
+      cur = '';
+      continue;
+    }
+    cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+
+async function openCnsQualityLoader(){
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = '.csv,text/csv';
+  inp.style.display = 'none';
+  document.body.appendChild(inp);
+  inp.onchange = async ()=>{
+    const f = inp.files && inp.files[0];
+    inp.remove();
+    if(!f) return;
+    try{
+      const text = await f.text();
+      const lines = text.split(/\r?\n/).filter(l=>l.trim().length);
+      if(lines.length < 2) throw new Error('csv-vazio');
+      const head = lines[0];
+      const semi = (head.match(/;/g)||[]).length;
+      const comma = (head.match(/,/g)||[]).length;
+      const delim = semi >= comma ? ';' : ',';
+      const cols = splitCsvLine(head, delim).map(s=>String(s||'').trim().toLowerCase());
+      const idx = (name)=>cols.indexOf(name);
+      const pick = (row, names)=>{
+        for(const n of names){
+          const j = idx(n);
+          if(j>=0 && j<row.length){
+            const v = String(row[j]||'').trim();
+            if(v!=='' && v!=='—' && v!=='-') return v;
+          }
+        }
+        return null;
+      };
+      const toNum = (s)=>{
+        if(s==null) return null;
+        const v = Number(String(s).replace(/\./g,'').replace(',','.'));
+        return isFinite(v) ? v : null;
+      };
+      const map = {};
+      for(let i=1;i<lines.length;i++){
+        const row = splitCsvLine(lines[i], delim);
+        const cnes = pick(row, ['cnes','cnes_hosp','cod_cnes']);
+        if(!cnes) continue;
+        const q = toNum(pick(row, ['quimio_apacs_sem_cns','quimio_sem_cns','quimio_cns_vazio','apacs_quimio_sem_cns','apacs_sem_cns_quimio']));
+        const r = toNum(pick(row, ['radio_apacs_sem_cns','radio_sem_cns','radio_cns_vazio','apacs_radio_sem_cns','apacs_sem_cns_radio']));
+        map[String(cnes)] = { q, r };
+      }
+      CNS_QUAL.byCnes = map;
+      CNS_QUAL.loaded = true;
+      (DATA?.hospitais || []).forEach(h=>{
+        const rec = map[String(h.cnes)];
+        if(!rec) return;
+        if(rec.q!=null) h.quimio_apacs_sem_cns = rec.q;
+        if(rec.r!=null) h.radio_apacs_sem_cns = rec.r;
+      });
+      renderAll();
+    }catch(e){
+      alert('Falha ao carregar o CSV de qualidade CNS. Verifique se há coluna CNES e (opcional) quimio_apacs_sem_cns / radio_apacs_sem_cns.');
+    }
+  };
+  inp.click();
 }
 
 function getFilteredExcept(exceptKey){
@@ -1192,8 +1438,11 @@ function makeChart(id, cfg){
 /* ---------- RENDERERS ---------- */
 function renderAll(){
   const reg = getFiltered();
+  INCONG.quimioSessPac = computeIncongruenceQuimioSessPac(reg);
+  INCONG.radioSessPac = computeIncongruenceRadioSessPac(reg);
   renderKPIs(reg);
   renderPanorama(reg);
+  renderConsistencia(reg);
   renderDistribuicao(reg);
   renderProducao(reg);
   renderCorrelacoes();
@@ -1207,8 +1456,6 @@ function renderKPIs(reg){
   const sum = (k)=>reg.reduce((a,x)=>a+(Number(x[k])||0),0);
   const nCacon = reg.filter(r=>r.tipo==='CACON').length;
   const nUnacon = reg.filter(r=>r.tipo==='UNACON').length;
-  const resSum = sum('residentes');
-  const precSum = sum('preceptores');
   const items = [
     {l:'Hospitais Habilitados', v:reg.length, sub:`${nCacon} CACON · ${nUnacon} UNACON`, grad:'linear-gradient(90deg,#6366f1,#8b5cf6)'},
     {l:'Leitos SUS', v:fmt(sum('leitos_sus')), sub:fmt(sum('leitos_total'))+' existentes', grad:'linear-gradient(90deg,#10b981,#22d3ee)'},
@@ -1218,7 +1465,6 @@ function renderKPIs(reg){
     {l:'Internações AIH', v:fmt(sum('aih_total')), sub:fmtBRL(sum('aih_valor')), grad:'linear-gradient(90deg,#8b5cf6,#ec4899)'},
     {l:'Cirurgias Oncológicas', v:fmt(sum('cirurgias_onco')), sub:'grupo 0416 SIGTAB', grad:'linear-gradient(90deg,#84cc16,#10b981)'},
     {l:'Profissionais (total)', v:fmt(sum('prof_total')), sub:`${fmt(sum('prof_onco_clin'))} onco clín · ${fmt(sum('prof_cirurg'))} cirurg · ${fmt(sum('prof_radio_onco'))} radio`, grad:'linear-gradient(90deg,#22d3ee,#8b5cf6)'},
-    {l:'Residentes · Preceptores', v:`${fmt(resSum)} · ${fmt(precSum)}`, sub: (resSum===0 && precSum===0) ? 'Sem registros no CNES (base atual)' : 'Capacidade formadora', grad:'linear-gradient(90deg,#f59e0b,#6366f1)'},
   ];
   document.getElementById('kpi-container').innerHTML = items.map(i=>`
     <div class="kpi" style="--grad:${i.grad}">
@@ -1318,6 +1564,8 @@ function baseBarOptions(rot=false){
 /* ---------- DISTRIBUIÇÕES: bins automáticos + truncamento ---------- */
 const HIST_DEFAULTS = { trimLow: 0.01, trimHigh: 0.99, minBins: 6, maxBins: 40 };
 const COUNTRY_CACHE = { ready: false, metrics: {} };
+let INCONG = { quimioSessPac: null, radioSessPac: null };
+let CNS_QUAL = { loaded: false, byCnes: {} };
 
 function getHistOptions(){
   const trimEl = document.getElementById('opt-trim');
@@ -1352,6 +1600,105 @@ function summarize(values){
   const p90 = quantileSorted(v, 0.90);
   const p99 = quantileSorted(v, 0.99);
   return { n:v.length, sorted:v, mean, p01, p10, p25, p50, p75, p90, p99, min:v[0], max:v[v.length-1], iqr: (p75 - p25) };
+}
+
+function stddev(values){
+  const v = values.filter(x=>x!=null && isFinite(x)).map(Number);
+  const n = v.length;
+  if(n < 2) return 0;
+  const mean = v.reduce((a,b)=>a+b,0)/n;
+  let s2 = 0;
+  for(let i=0;i<n;i++){
+    const d = v[i] - mean;
+    s2 += d*d;
+  }
+  return Math.sqrt(s2 / (n - 1));
+}
+
+function cutoffIqrUpper(values){
+  const st = summarize(values);
+  if(!st) return { st: null, cutoff: null, label: 'IQR' };
+  const iqr = st.iqr;
+  if(isFinite(iqr) && iqr > 0){
+    return { st, cutoff: st.p75 + 1.5*iqr, label: 'IQR (Q3+1,5×IQR)' };
+  }
+  return { st, cutoff: st.p99, label: 'p99 (fallback)' };
+}
+
+function quimioSessPac(h){
+  const apacs = Number(h?.quimio_apacs) || 0;
+  const pac = Number(h?.quimio_pacientes) || 0;
+  if(apacs <= 0 || pac <= 0) return null;
+  const v = apacs / pac;
+  return isFinite(v) ? v : null;
+}
+
+function computeIncongruenceQuimioSessPac(reg){
+  const rows = (reg || [])
+    .map(h=>{
+      const v = quimioSessPac(h);
+      const semCns = (h && h.quimio_apacs_sem_cns!=null && isFinite(h.quimio_apacs_sem_cns)) ? Number(h.quimio_apacs_sem_cns) : null;
+      return { cnes: String(h.cnes), nome: h.nome, uf: h.uf, apacs: Number(h.quimio_apacs)||0, semCns, pacientes: Number(h.quimio_pacientes)||0, v };
+    })
+    .filter(r=>r.v!=null && isFinite(r.v));
+  const values = rows.map(r=>r.v);
+  const cut = cutoffIqrUpper(values);
+  const cutoff = cut.cutoff;
+  const outliers = (cutoff==null || !isFinite(cutoff)) ? [] : rows.filter(r=>r.v > cutoff).sort((a,b)=>b.v-a.v);
+  const outlierSet = new Set(outliers.map(r=>String(r.cnes)));
+  return { st: cut.st, cutoff, cutoffLabel: cut.label, values, rows, outliers, outlierSet };
+}
+
+function radioSessPac(h){
+  const apacs = Number(h?.radio_apacs) || 0;
+  const pac = Number(h?.radio_pacientes) || 0;
+  if(apacs <= 0 || pac <= 0) return null;
+  const v = apacs / pac;
+  return isFinite(v) ? v : null;
+}
+
+function computeIncongruenceRadioSessPac(reg){
+  const rows = (reg || [])
+    .map(h=>{
+      const v = radioSessPac(h);
+      const semCns = (h && h.radio_apacs_sem_cns!=null && isFinite(h.radio_apacs_sem_cns)) ? Number(h.radio_apacs_sem_cns) : null;
+      return { cnes: String(h.cnes), nome: h.nome, uf: h.uf, apacs: Number(h.radio_apacs)||0, semCns, pacientes: Number(h.radio_pacientes)||0, v };
+    })
+    .filter(r=>r.v!=null && isFinite(r.v));
+  const values = rows.map(r=>r.v);
+  const cut = cutoffIqrUpper(values);
+  const cutoff = cut.cutoff;
+  const outliers = (cutoff==null || !isFinite(cutoff)) ? [] : rows.filter(r=>r.v > cutoff).sort((a,b)=>b.v-a.v);
+  const outlierSet = new Set(outliers.map(r=>String(r.cnes)));
+  return { st: cut.st, cutoff, cutoffLabel: cut.label, values, rows, outliers, outlierSet };
+}
+
+function computeConsistency(reg, incQ, incR){
+  const sum = (arr, key)=>arr.reduce((a,x)=>a+(Number(x[key])||0),0);
+  const sumSem = (arr)=>arr.reduce((a,x)=>a+(x.semCns==null?0:(Number(x.semCns)||0)),0);
+  const qBad = (reg||[])
+    .filter(h=>(Number(h.quimio_apacs)||0)>0 && (Number(h.quimio_pacientes)||0)===0)
+    .map(h=>({cnes:String(h.cnes), nome:h.nome, uf:h.uf, apacs:Number(h.quimio_apacs)||0, pacientes:Number(h.quimio_pacientes)||0, semCns:(h.quimio_apacs_sem_cns==null?null:Number(h.quimio_apacs_sem_cns)||0)}))
+    .sort((a,b)=>b.apacs-a.apacs);
+  const rBad = (reg||[])
+    .filter(h=>(Number(h.radio_apacs)||0)>0 && (Number(h.radio_pacientes)||0)===0)
+    .map(h=>({cnes:String(h.cnes), nome:h.nome, uf:h.uf, apacs:Number(h.radio_apacs)||0, pacientes:Number(h.radio_pacientes)||0, semCns:(h.radio_apacs_sem_cns==null?null:Number(h.radio_apacs_sem_cns)||0)}))
+    .sort((a,b)=>b.apacs-a.apacs);
+  const details = [
+    ...qBad.map(x=>({mod:'Quimio', ...x})),
+    ...rBad.map(x=>({mod:'Radio', ...x})),
+  ].sort((a,b)=>b.apacs-a.apacs);
+  return {
+    qBad,
+    rBad,
+    qBadApacs: sum(qBad, 'apacs'),
+    rBadApacs: sum(rBad, 'apacs'),
+    qBadSemCns: sumSem(qBad),
+    rBadSemCns: sumSem(rBad),
+    qOutliers: incQ?.outliers?.length || 0,
+    rOutliers: incR?.outliers?.length || 0,
+    details
+  };
 }
 
 function freedmanDiaconisBinWidth(stats){
@@ -1672,8 +2019,6 @@ function getMetricDefs(){
     prof_radio_onco: { label:'Radioterapeutas', get:(h)=>h.prof_radio_onco, format:(x)=>fmt(x), tick:(v)=>fmtK(v) },
     h_cirurg: { label:'Horas (cirurg. onco)', get:(h)=>h.h_cirurg, format:(x)=>fmt(x), tick:(v)=>fmtK(v) },
     h_clin: { label:'Horas (onco clín.)', get:(h)=>h.h_clin, format:(x)=>fmt(x), tick:(v)=>fmtK(v) },
-    residentes: { label:'Residentes (CNES)', get:(h)=>h.residentes, format:(x)=>fmt(x), tick:(v)=>fmtK(v) },
-    preceptores: { label:'Preceptores (CNES)', get:(h)=>h.preceptores, format:(x)=>fmt(x), tick:(v)=>fmtK(v) },
     total_equip: { label:'Equipamentos (total)', get:(h)=>h.total_equip, format:(x)=>fmt(x), tick:(v)=>fmtK(v) },
     aceleradores_lineares: { label:'Aceleradores lineares', get:(h)=>h.aceleradores_lineares, format:(x)=>fmt(x), tick:(v)=>fmtK(v) },
     bombas_cobalto: { label:'Bombas de cobalto', get:(h)=>h.bombas_cobalto, format:(x)=>fmt(x), tick:(v)=>fmtK(v) },
@@ -1691,6 +2036,58 @@ function getMetricDefs(){
     r_ticket: { label:'Ticket radio (R$/paciente)', get:rTicket, format:(x)=>fmtMoney(x), tick:(v)=>fmtK(v) },
     aih_ticket: { label:'Ticket AIH (R$/internação)', get:aihTicket, format:(x)=>fmtMoney(x), tick:(v)=>fmtK(v) },
   };
+}
+
+function renderConsistencia(reg){
+  const inc = INCONG.quimioSessPac || computeIncongruenceQuimioSessPac(reg);
+  const incR = INCONG.radioSessPac || computeIncongruenceRadioSessPac(reg);
+  const cons = computeConsistency(reg, inc, incR);
+
+  const statusEl = document.getElementById('cons-status');
+  if(statusEl){
+    const qual = CNS_QUAL.loaded ? 'Qualidade CNS: carregada.' : 'Qualidade CNS: não carregada.';
+    statusEl.innerHTML = `${qual} Quimio — ${fmt(cons.qBad.length)} hospitais com APAC&gt;0 e Pac=0 · Radio — ${fmt(cons.rBad.length)}.`;
+  }
+
+  const tbCons = document.querySelector('#tab-consistencia tbody');
+  if(tbCons){
+    const hasQual = CNS_QUAL.loaded;
+    tbCons.innerHTML = [
+      { mod:'Quimioterapia', bad: cons.qBad.length, apacs: cons.qBadApacs, semCns: hasQual ? cons.qBadSemCns : null, out: cons.qOutliers },
+      { mod:'Radioterapia', bad: cons.rBad.length, apacs: cons.rBadApacs, semCns: hasQual ? cons.rBadSemCns : null, out: cons.rOutliers }
+    ].map(r=>`
+      <tr>
+        <td>${r.mod}</td>
+        <td style="text-align:right;font-family:'JetBrains Mono',monospace">${fmt(r.bad)}</td>
+        <td style="text-align:right;font-family:'JetBrains Mono',monospace">${fmt(r.apacs)}</td>
+        <td style="text-align:right;font-family:'JetBrains Mono',monospace">${r.semCns==null?'—':fmt(r.semCns)}</td>
+        <td style="text-align:right;font-family:'JetBrains Mono',monospace">${fmt(r.out)}</td>
+      </tr>
+    `).join('');
+  }
+
+  const tbDet = document.querySelector('#tab-consistencia-detalhe tbody');
+  if(tbDet){
+    if(!cons.details.length){
+      tbDet.innerHTML = `<tr><td colspan="5" style="color:var(--muted)">Nenhum registro incompatível (APAC&gt;0 com pacientes=0) no filtro atual.</td></tr>`;
+    } else {
+      tbDet.innerHTML = cons.details.slice(0,240).map(r=>`
+        <tr data-cnes="${r.cnes}" style="cursor:pointer">
+          <td>${r.mod}</td>
+          <td>${(r.nome||'—').substring(0,60)}<br><small style="color:var(--muted)">CNES ${r.cnes}</small></td>
+          <td>${r.uf||'—'}</td>
+          <td style="text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:#fb7185">${fmt(r.apacs)}</td>
+          <td style="text-align:right;font-family:'JetBrains Mono',monospace">${fmt(r.pacientes)}</td>
+        </tr>
+      `).join('');
+      [...tbDet.querySelectorAll('tr[data-cnes]')].forEach(tr=>{
+        tr.addEventListener('click', ()=>{
+          const cnes = tr.getAttribute('data-cnes');
+          if(cnes) setFocus(cnes, { goToTab:'consistencia' });
+        });
+      });
+    }
+  }
 }
 
 function renderDistribuicao(reg){
@@ -1716,12 +2113,114 @@ function renderDistribuicao(reg){
   histChart('h-quimio', reg.map(r=>r.quimio_pacientes), COLORS.amber, {dec:0, focus: focus?.quimio_pacientes, startAtZero:true});
   histChart('h-radio',  reg.map(r=>r.radio_pacientes),  COLORS.cyan,  {dec:0, focus: focus?.radio_pacientes, startAtZero:true});
   histChart('h-cir',    reg.map(r=>r.cirurgias_onco),   COLORS.lime,  {dec:0, focus: focus?.cirurgias_onco, startAtZero:true});
+  const inc = INCONG.quimioSessPac || computeIncongruenceQuimioSessPac(reg);
+  const focusSess = focus ? quimioSessPac(focus) : null;
+  histChart('h-q-sess-pac', inc.values, COLORS.amber, {dec:2, focus: focusSess, startAtZero:true});
+  const subSess = document.getElementById('sub-q-sess-pac');
+  if(subSess){
+    const n = inc.st?.n || 0;
+    const c = (inc.cutoff==null || !isFinite(inc.cutoff)) ? '—' : inc.cutoff.toFixed(2);
+    const q1 = (inc.st?.p25==null || !isFinite(inc.st?.p25)) ? '—' : inc.st.p25.toFixed(2);
+    const q3 = (inc.st?.p75==null || !isFinite(inc.st?.p75)) ? '—' : inc.st.p75.toFixed(2);
+    const iqr = (inc.st?.iqr==null || !isFinite(inc.st?.iqr)) ? '—' : inc.st.iqr.toFixed(2);
+    const lbl = inc.cutoffLabel || 'IQR';
+    subSess.textContent = `APACs de quimio / pacientes únicos · corte (${lbl}) = ${c} · Q1=${q1} · Q3=${q3} · IQR=${iqr} · N=${n}`;
+  }
+  const subInc = document.getElementById('sub-incongruentes-quimio');
+  if(subInc){
+    const c = (inc.cutoff==null || !isFinite(inc.cutoff)) ? '—' : inc.cutoff.toFixed(2);
+    subInc.textContent = `Hospitais com APACs/paciente acima do corte (${inc.cutoffLabel || 'IQR'} = ${c}). Clique para definir Hospital foco.`;
+  }
+  const tbodyInc = document.querySelector('#tab-incongruentes-quimio tbody');
+  if(tbodyInc){
+    if(!inc.outliers.length){
+      tbodyInc.innerHTML = `<tr><td colspan="6" style="color:var(--muted)">Nenhum hospital acima do corte no filtro atual.</td></tr>`;
+    } else {
+      tbodyInc.innerHTML = inc.outliers.slice(0,200).map(r=>`
+        <tr data-cnes="${r.cnes}" style="cursor:pointer">
+          <td>${(r.nome||'—').substring(0,60)}<br><small style="color:var(--muted)">CNES ${r.cnes}</small></td>
+          <td>${r.uf||'—'}</td>
+          <td style="text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:#fb7185">${r.v.toFixed(2)}</td>
+          <td style="text-align:right;font-family:'JetBrains Mono',monospace">${fmt(r.apacs)}</td>
+          <td style="text-align:right;font-family:'JetBrains Mono',monospace">${r.semCns==null?'—':fmt(r.semCns)}</td>
+          <td style="text-align:right;font-family:'JetBrains Mono',monospace">${fmt(r.pacientes)}</td>
+        </tr>
+      `).join('');
+      [...tbodyInc.querySelectorAll('tr[data-cnes]')].forEach(tr=>{
+        tr.addEventListener('click', ()=>{
+          const cnes = tr.getAttribute('data-cnes');
+          if(cnes) setFocus(cnes, { goToTab:'distribuicao' });
+        });
+      });
+    }
+  }
+
+  const incR = INCONG.radioSessPac || computeIncongruenceRadioSessPac(reg);
+  const focusSessR = focus ? radioSessPac(focus) : null;
+  histChart('h-r-sess-pac', incR.values, COLORS.cyan, {dec:2, focus: focusSessR, startAtZero:true});
+  const subSessR = document.getElementById('sub-r-sess-pac');
+  if(subSessR){
+    const n = incR.st?.n || 0;
+    const c = (incR.cutoff==null || !isFinite(incR.cutoff)) ? '—' : incR.cutoff.toFixed(2);
+    const q1 = (incR.st?.p25==null || !isFinite(incR.st?.p25)) ? '—' : incR.st.p25.toFixed(2);
+    const q3 = (incR.st?.p75==null || !isFinite(incR.st?.p75)) ? '—' : incR.st.p75.toFixed(2);
+    const iqr = (incR.st?.iqr==null || !isFinite(incR.st?.iqr)) ? '—' : incR.st.iqr.toFixed(2);
+    const lbl = incR.cutoffLabel || 'IQR';
+    subSessR.textContent = `APACs de radio / pacientes únicos · corte (${lbl}) = ${c} · Q1=${q1} · Q3=${q3} · IQR=${iqr} · N=${n}`;
+  }
+  const subIncR = document.getElementById('sub-incongruentes-radio');
+  if(subIncR){
+    const c = (incR.cutoff==null || !isFinite(incR.cutoff)) ? '—' : incR.cutoff.toFixed(2);
+    subIncR.textContent = `Hospitais com APACs/paciente acima do corte (${incR.cutoffLabel || 'IQR'} = ${c}). Clique para definir Hospital foco.`;
+  }
+  const tbodyIncR = document.querySelector('#tab-incongruentes-radio tbody');
+  if(tbodyIncR){
+    if(!incR.outliers.length){
+      tbodyIncR.innerHTML = `<tr><td colspan="6" style="color:var(--muted)">Nenhum hospital acima do corte no filtro atual.</td></tr>`;
+    } else {
+      tbodyIncR.innerHTML = incR.outliers.slice(0,200).map(r=>`
+        <tr data-cnes="${r.cnes}" style="cursor:pointer">
+          <td>${(r.nome||'—').substring(0,60)}<br><small style="color:var(--muted)">CNES ${r.cnes}</small></td>
+          <td>${r.uf||'—'}</td>
+          <td style="text-align:right;font-family:'JetBrains Mono',monospace;font-weight:700;color:#fb7185">${r.v.toFixed(2)}</td>
+          <td style="text-align:right;font-family:'JetBrains Mono',monospace">${fmt(r.apacs)}</td>
+          <td style="text-align:right;font-family:'JetBrains Mono',monospace">${r.semCns==null?'—':fmt(r.semCns)}</td>
+          <td style="text-align:right;font-family:'JetBrains Mono',monospace">${fmt(r.pacientes)}</td>
+        </tr>
+      `).join('');
+      [...tbodyIncR.querySelectorAll('tr[data-cnes]')].forEach(tr=>{
+        tr.addEventListener('click', ()=>{
+          const cnes = tr.getAttribute('data-cnes');
+          if(cnes) setFocus(cnes, { goToTab:'distribuicao' });
+        });
+      });
+    }
+  }
+
+  const incNote = document.getElementById('inc-note');
+  if(incNote){
+    const qCut = (inc.cutoff==null || !isFinite(inc.cutoff)) ? '—' : inc.cutoff.toFixed(2);
+    const rCut = (incR.cutoff==null || !isFinite(incR.cutoff)) ? '—' : incR.cutoff.toFixed(2);
+    const qual = CNS_QUAL.loaded ? 'Qualidade CNS: carregada.' : 'Qualidade CNS: não carregada.';
+    const qLbl = inc.cutoffLabel || 'IQR';
+    const rLbl = incR.cutoffLabel || 'IQR';
+    incNote.innerHTML = `
+      <strong>Qualidade do registro:</strong> sinal frequente de inconsistência é ter muitas APACs e poucos pacientes únicos (deduplicação por CNS). ${qual}
+      <div style="margin-top:8px">
+        <span style="color:var(--text2)">No filtro atual:</span>
+        Quimio — ${inc.outliers.length} hospitais acima do corte (${qLbl}=${qCut}) ·
+        Radio — ${incR.outliers.length} hospitais acima do corte (${rLbl}=${rCut}).
+      </div>
+      <div class="legend-inline" style="margin-top:10px">
+        <button class="btn-export" onclick="openCnsQualityLoader()">Carregar qualidade CNS (CSV)</button>
+        <span style="color:var(--muted)">Opcional: adiciona “APACs sem CNS” nos painéis de Quimio/Radio.</span>
+      </div>
+    `;
+  }
   histChart('h-tmp',    reg.map(r=>r.tmp), COLORS.pink, {dec:1, focus: focus?.tmp, startAtZero:true});
   histChart('h-ocup',   reg.map(r=>r.taxa_ocupacao), COLORS.accent2, {dec:1, focus: focus?.taxa_ocupacao, startAtZero:true});
   histChart('h-onco1k', reg.map(r=>r.ind_onco_clin_1k), COLORS.emerald, {dec:1, focus: focus?.ind_onco_clin_1k, startAtZero:true});
   histChart('h-leitos1k', reg.map(r=>r.ind_leitos_1k), COLORS.accent, {dec:1, focus: focus?.ind_leitos_1k, startAtZero:true});
-  histChart('h-res',    reg.map(r=>r.residentes), COLORS.amber, {dec:0, focus: focus?.residentes, startAtZero:true});
-  histChart('h-razpr',  reg.map(r=>r.razao_preceptor_residente), COLORS.cyan, {dec:2, focus: focus?.razao_preceptor_residente, startAtZero:true});
   histChart('h-radio1k', reg.map(r=>r.ind_radio_1k), COLORS.cyan, {dec:2, focus: focus?.ind_radio_1k, startAtZero:true});
   histChart('h-uti1k', reg.map(r=>r.ind_uti_1k), COLORS.rose, {dec:2, focus: focus?.ind_uti_1k, startAtZero:true});
   const cir1k = r => (r.prof_cirurg!=null && (r.pacientes_unicos_total||0)>0) ? (r.prof_cirurg / r.pacientes_unicos_total * 1000) : null;
@@ -1859,6 +2358,7 @@ function renderPerfilUF(){
 function renderProducao(reg){
   // Top 15 quimio
   const isFocus = (h)=>FILT.foco && String(h.cnes)===String(FILT.foco);
+  const incSet = INCONG.quimioSessPac?.outlierSet || new Set();
   const topQ = [...reg].sort((a,b)=>(b.quimio_pacientes||0)-(a.quimio_pacientes||0)).slice(0,15);
   renderLegendForHospitals('legend-top-quimio', topQ);
   makeChart('c-top-quimio',{
@@ -1867,14 +2367,19 @@ function renderProducao(reg){
       labels: topQ.map(h=>(h.nome||h.cnes).slice(0,38)),
       datasets:[{label:'Pacientes únicos',data:topQ.map(h=>h.quimio_pacientes),
         backgroundColor:topQ.map(h=>isFocus(h)?'#ffffff':colorForUf(h.uf)),
-        borderColor:topQ.map(h=>isFocus(h)?'#ffffff':colorForUf(h.uf)),
-        borderWidth:1.5,
+        borderColor:topQ.map(h=>isFocus(h)?'#ffffff':(incSet.has(String(h.cnes))?COLORS.rose:colorForUf(h.uf))),
+        borderWidth:topQ.map(h=>incSet.has(String(h.cnes))?2.8:1.5),
         borderRadius:3,borderSkipped:false,maxBarThickness:20,categoryPercentage:0.7,barPercentage:0.9}]
     },
     options:{
       indexAxis:'y',responsive:true,maintainAspectRatio:false,
       onClick: (_, els)=>{ if(!els?.length) return; const h=topQ[els[0].index]; if(h?.cnes) setFocus(h.cnes, { goToTab:'distribuicao' }); },
-      plugins:{legend:{display:false}, tooltip:{callbacks:{label:(ctx)=>`${topQ[ctx.dataIndex]?.nome||'—'} (${topQ[ctx.dataIndex]?.uf||'—'}) — ${fmtK(ctx.raw)} pacientes`}}},
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:(ctx)=>{
+        const h = topQ[ctx.dataIndex];
+        const sp = quimioSessPac(h);
+        const flag = incSet.has(String(h?.cnes)) ? ' ⚠' : '';
+        return `${h?.nome||'—'} (${h?.uf||'—'}) — ${fmtK(ctx.raw)} pacientes · sessões/pac ${sp==null?'—':sp.toFixed(2)}${flag}`;
+      }}}},
       scales:{x:{grid:{color:COLORS.grid},ticks:{callback:v=>fmtK(v)}}, y:{grid:{display:false},ticks:{font:{size:10}}}}
     }
   });
@@ -2048,8 +2553,7 @@ function renderRankings(){
     cirurgias_onco:'cirurgias_onco',
     aih_total:'aih_total',
     leitos:'leitos_total',
-    uti:'uti_total',
-    residentes:'residentes'
+    uti:'uti_total'
   };
   const field = mapField[metric];
   const top = [...reg].filter(r=>(r[field]||0)>0).sort((a,b)=>(b[field]||0)-(a[field]||0)).slice(0,20);
@@ -2078,8 +2582,17 @@ function renderRankings(){
 
 function renderHospitais(reg){
   document.getElementById('hosp-count').textContent = reg.length;
+  const incSet = INCONG.quimioSessPac?.outlierSet || new Set();
+  const incSetR = INCONG.radioSessPac?.outlierSet || new Set();
   const tbody = document.querySelector('#tab-hospitais tbody');
-  tbody.innerHTML = reg.map(h=>`
+  tbody.innerHTML = reg.map(h=>{
+    const sp = quimioSessPac(h);
+    const sess = (sp==null || !isFinite(sp)) ? '—' : sp.toFixed(2);
+    const sessHtml = incSet.has(String(h.cnes)) ? `<span style="color:#fb7185;font-weight:800">${sess}</span>` : sess;
+    const spr = radioSessPac(h);
+    const sessr = (spr==null || !isFinite(spr)) ? '—' : spr.toFixed(2);
+    const sessrHtml = incSetR.has(String(h.cnes)) ? `<span style="color:#fb7185;font-weight:800">${sessr}</span>` : sessr;
+    return `
     <tr style="${FILT.foco && String(h.cnes)===String(FILT.foco) ? 'background:rgba(255,255,255,0.08)' : ''}">
       <td style="font-family:'JetBrains Mono',monospace;font-size:11px">${h.cnes}</td>
       <td>${(h.nome||'').substring(0,50)}</td>
@@ -2088,17 +2601,25 @@ function renderHospitais(reg){
       <td><span class="pill pill-${(h.tipo||'outro').toLowerCase()}">${h.tipo}</span></td>
       <td style="text-align:right">${fmt(h.leitos_total)}</td>
       <td style="text-align:right">${fmt(h.quimio_pacientes)}</td>
+      <td style="text-align:right;font-family:'JetBrains Mono',monospace">${sessHtml}</td>
       <td style="text-align:right">${fmt(h.radio_pacientes)}</td>
+      <td style="text-align:right;font-family:'JetBrains Mono',monospace">${sessrHtml}</td>
       <td style="text-align:right">${fmt(h.cirurgias_onco)}</td>
       <td style="text-align:right">${h.tmp!=null?h.tmp.toFixed(1):'—'}</td>
       <td style="text-align:right">${h.taxa_ocupacao!=null?h.taxa_ocupacao.toFixed(0)+'%':'—'}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 function renderMatriz(){
   const cont = document.getElementById('matriz-container');
   const grupos = {};
+  const isExcluded = (ind)=>{
+    const s = String(ind || '').toLowerCase();
+    return s.includes('residente') || s.includes('preceptor');
+  };
   (DATA.matriz_viabilidade||[]).forEach(([dim,ind,clas,obs])=>{
+    if(isExcluded(ind)) return;
     grupos[dim] = grupos[dim]||[];
     grupos[dim].push({ind,clas,obs});
   });
@@ -2131,10 +2652,6 @@ function renderMatriz(){
     "Oncologistas clínicos por 1.000 pacientes": {get:(h)=>h.ind_onco_clin_1k, fmt:fmt1},
     "Radioterapeutas por 1.000 pacientes": {get:(h)=>h.ind_radio_1k, fmt:fmt1},
     "Cirurgiões oncológicos por 1.000 pacientes": {get:(h)=>h.ind_cirurg_1k ?? ((h.prof_cirurg!=null && h.pacientes_unicos_total>0)?(h.prof_cirurg/h.pacientes_unicos_total*1000):null), fmt:fmt1},
-    "Residentes médicos / 1.000 pacientes": {get:(h)=>h.ind_residentes_1k ?? ((h.residentes!=null && h.pacientes_unicos_total>0)?(h.residentes/h.pacientes_unicos_total*1000):null), fmt:fmt2},
-    "Preceptores médicos / 1.000 pacientes": {get:(h)=>h.ind_preceptores_1k ?? ((h.preceptores!=null && h.pacientes_unicos_total>0)?(h.preceptores/h.pacientes_unicos_total*1000):null), fmt:fmt2},
-    "Razão preceptores / residentes": {get:(h)=>h.razao_preceptor_residente, fmt:fmt2},
-    "% médicos vinculados marcados como residentes ou preceptores": {get:(h)=>(h.prof_total>0)?((Number(h.residentes)||0)+(Number(h.preceptores)||0))/h.prof_total*100:null, fmt:fmtPct},
     "Leitos de internação / pacientes": {get:(h)=>h.ind_leitos_1k, fmt:fmt2},
     "Leitos de UTI / pacientes": {get:(h)=>h.ind_uti_1k, fmt:fmt2},
     "Volume de quimioterapia": {get:(h)=>h.quimio_apacs, fmt:fmtInt},
@@ -2153,7 +2670,7 @@ function renderMatriz(){
     "Postos de trabalho vagos": {get:()=>null, fmt:fmt2},
   };
 
-  const rows = (DATA.matriz_viabilidade||[]).map(([dim,ind,clas])=>{
+  const rows = (DATA.matriz_viabilidade||[]).filter(([,ind])=>!isExcluded(ind)).map(([dim,ind,clas])=>{
     const def = defs[ind];
     if(!def) return {dim,ind,clas, ok:false};
     const arr = reg.map(h=>def.get(h)).filter(v=>v!=null && isFinite(v));
@@ -2202,7 +2719,6 @@ function exportCurrent(){
     Tipo:h.tipo, Gestao:h.gestao, NaturezaJuridica:h.nat_jur,
     LeitosTotal:h.leitos_total, LeitosSUS:h.leitos_sus, UTI_Total:h.uti_total, UTI_SUS:h.uti_sus,
     Profissionais:h.prof_total, OncoClin:h.prof_onco_clin, RadioOnco:h.prof_radio_onco, CirurgOnco:h.prof_cirurg,
-    Residentes:h.residentes, Preceptores:h.preceptores, RazaoPR:h.razao_preceptor_residente,
     QuimioAPACs:h.quimio_apacs, QuimioPacientes:h.quimio_pacientes, QuimioValor:h.quimio_valor,
     RadioAPACs:h.radio_apacs, RadioPacientes:h.radio_pacientes, RadioValor:h.radio_valor,
     AIH_Internacoes:h.aih_total, AIH_Valor:h.aih_valor, AIH_Dias:h.aih_dias,
